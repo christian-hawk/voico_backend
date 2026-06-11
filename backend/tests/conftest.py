@@ -4,11 +4,9 @@ import pytest
 from alembic import command
 from alembic.config import Config
 from httpx import ASGITransport, AsyncClient
-from sqlalchemy.ext.asyncio import create_async_engine
-from sqlalchemy.orm import sessionmaker
-from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
+from app.core.db import create_engine_and_session_factory
 from app.main import app
 from app.modules.calls.router import get_session
 from app.modules.calls.schema import Call
@@ -29,15 +27,11 @@ def test_db_url(tmp_path, monkeypatch):
 
 
 @pytest.fixture
-async def test_engine(test_db_url):
-    engine = create_async_engine(test_db_url, connect_args={"check_same_thread": False})
-    yield engine
+async def test_session_factory(test_db_url):
+    # same engine/session config the app uses, differing only in URL
+    engine, session_factory = create_engine_and_session_factory(test_db_url)
+    yield session_factory
     await engine.dispose()
-
-
-@pytest.fixture
-def test_session_factory(test_engine):
-    return sessionmaker(bind=test_engine, class_=AsyncSession, expire_on_commit=False)
 
 
 @pytest.fixture
