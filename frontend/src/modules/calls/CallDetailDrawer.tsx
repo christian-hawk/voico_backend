@@ -1,11 +1,17 @@
+import { useState } from "react";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { X, Phone, User, Clock, Calendar, FileText, Sparkles } from "lucide-react";
+import { X, Phone, User, Clock, Calendar, FileText, Sparkles, StickyNote } from "lucide-react";
+import { callsApi } from "@/services/api";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { StatusBadge } from "./CallsTable";
 import type { Call } from "@/types/calls";
 
 interface CallDetailDrawerProps {
   call: Call | null;
   onClose: () => void;
+  onCallUpdated: (call: Call) => void;
 }
 
 function DetailRow({
@@ -35,8 +41,38 @@ function formatDuration(seconds: number | null): string {
   return m > 0 ? `${m} min ${s} sec` : `${s} sec`;
 }
 
-export function CallDetailDrawer({ call, onClose }: CallDetailDrawerProps) {
+export function CallDetailDrawer({ call, onClose, onCallUpdated }: CallDetailDrawerProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const queryClient = useQueryClient();
+
+  const notesMutation = useMutation({
+    mutationFn: (vars: { id: string; notes: string | null }) =>
+      callsApi.updateNotes(vars.id, vars.notes),
+    onSuccess: (updated) => {
+      onCallUpdated(updated);
+      queryClient.invalidateQueries({ queryKey: ["calls"] });
+      setIsEditing(false);
+    },
+  });
+
   if (!call) return null;
+
+  const startEditing = () => {
+    notesMutation.reset();
+    setDraft(call.notes ?? "");
+    setIsEditing(true);
+  };
+
+  const cancelEditing = () => {
+    notesMutation.reset();
+    setIsEditing(false);
+  };
+
+  const saveNotes = () => {
+    const trimmed = draft.trim();
+    notesMutation.mutate({ id: call.id, notes: trimmed === "" ? null : trimmed });
+  };
 
   return (
     <>
@@ -127,6 +163,59 @@ export function CallDetailDrawer({ call, onClose }: CallDetailDrawerProps) {
             </div>
           </div>
         )}
+
+        {/* Notes */}
+        <div className="px-6 py-4 border-t border-border">
+          <div className="flex items-center gap-2 mb-2">
+            <StickyNote className="h-4 w-4 text-muted-foreground" />
+            <h3 className="text-sm font-semibold text-foreground">Notes</h3>
+          </div>
+          {isEditing ? (
+            <div className="space-y-2">
+              <Textarea
+                autoFocus
+                value={draft}
+                placeholder="Add notes…"
+                onChange={(e) => setDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") cancelEditing();
+                }}
+              />
+              {notesMutation.isError && (
+                <p className="text-xs text-red-500">Failed to save notes. Try again.</p>
+              )}
+              <div className="flex items-center gap-2">
+                <Button size="sm" onClick={saveNotes} disabled={notesMutation.isPending}>
+                  Save
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={cancelEditing}
+                  disabled={notesMutation.isPending}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          ) : call.notes ? (
+            <button
+              type="button"
+              onClick={startEditing}
+              className="w-full text-left text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap hover:bg-muted/50 rounded-md transition-colors"
+            >
+              {call.notes}
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={startEditing}
+              className="text-sm text-muted-foreground italic hover:text-foreground transition-colors"
+            >
+              Add notes…
+            </button>
+          )}
+        </div>
 
         {/* Footer */}
         <div className="px-6 py-3 border-t border-border bg-muted/30">
