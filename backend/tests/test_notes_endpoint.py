@@ -7,6 +7,12 @@ def test_app_loggers_survive_migrations(test_db_url):
     assert logging.getLogger("app.modules.calls.service").disabled is False
 
 
+async def test_make_call_accepts_phone_number_override(make_call):
+    call = await make_call(phone_number="+1 555 0100")
+
+    assert call.phone_number == "+1 555 0100"
+
+
 async def test_patch_notes_sets_value(client, make_call):
     call = await make_call()
 

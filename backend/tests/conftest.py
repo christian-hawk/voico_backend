@@ -57,8 +57,9 @@ async def client(test_session_factory):
 def make_call(test_session_factory):
     # there is no create endpoint; rows are inserted through the session directly
     async def _make_call(**overrides) -> Call:
+        overrides.setdefault("phone_number", "+55 11 99999-0000")
         async with test_session_factory() as session:
-            call = Call(phone_number="+55 11 99999-0000", **overrides)
+            call = Call(**overrides)
             session.add(call)
             await session.commit()
             await session.refresh(call)
