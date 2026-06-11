@@ -54,6 +54,7 @@ class CallService:
 
     async def update_notes(self, call_id: uuid.UUID, notes: Optional[str]) -> CallResponse:
         call = await self._get_call_or_404(call_id)
-        call.notes = notes
-        call = await self.repository.update(call)
+        if call.notes != notes:
+            call.notes = notes
+            call = await self.repository.update(call)
         return CallResponse.model_validate(call, from_attributes=True)
