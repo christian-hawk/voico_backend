@@ -7,6 +7,7 @@ from fastapi import HTTPException, status
 
 from app.modules.calls.repository import CallRepository
 from app.modules.calls.schema import (
+    Call,
     CallCounts,
     CallResponse,
     CallStatus,
@@ -42,16 +43,18 @@ class CallService:
             ),
         )
 
-    async def get_call(self, call_id: uuid.UUID) -> CallResponse:
+    async def _get_call_or_404(self, call_id: uuid.UUID) -> Call:
         call = await self.repository.get_by_id(call_id)
         if call is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Call not found")
+        return call
+
+    async def get_call(self, call_id: uuid.UUID) -> CallResponse:
+        call = await self._get_call_or_404(call_id)
         return CallResponse.model_validate(call, from_attributes=True)
 
     async def update_notes(self, call_id: uuid.UUID, notes: Optional[str]) -> CallResponse:
-        call = await self.repository.get_by_id(call_id)
-        if call is None:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Call not found")
+        call = await self._get_call_or_404(call_id)
         call.notes = notes
         call.updated_at = datetime.utcnow()
         call = await self.repository.update(call)
