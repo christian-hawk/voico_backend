@@ -66,6 +66,10 @@ class WebhookCallPayload(SQLModel):
     ended_at: Optional[datetime] = None
 
 
+class UpdateNotesRequest(SQLModel):
+    notes: Optional[str]
+
+
 class CallResponse(SQLModel):
     id: uuid.UUID
     phone_number: str
