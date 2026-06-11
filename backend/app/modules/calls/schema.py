@@ -79,6 +79,7 @@ class CallResponse(SQLModel):
     created_at: datetime
     updated_at: datetime
     raw_transcript: Optional[str]
+    notes: Optional[str]
 
 
 class CallCounts(SQLModel):
