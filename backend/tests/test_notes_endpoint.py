@@ -71,6 +71,35 @@ async def test_patch_notes_noop_preserves_updated_at(client, make_call):
     assert second.json()["updated_at"] == first.json()["updated_at"]
 
 
+async def test_patch_notes_trims_value(client, make_call):
+    call = await make_call()
+
+    resp = await client.patch(f"/api/calls/{call.id}/notes", json={"notes": "  x  "})
+
+    assert resp.status_code == 200
+    assert resp.json()["notes"] == "x"
+
+
+async def test_patch_notes_whitespace_only_clears(client, make_call):
+    call = await make_call(notes="initial")
+
+    resp = await client.patch(f"/api/calls/{call.id}/notes", json={"notes": "   "})
+
+    assert resp.status_code == 200
+    assert resp.json()["notes"] is None
+
+
+async def test_patch_notes_noop_after_normalization(client, make_call):
+    call = await make_call(notes="x")
+    before = (await client.get(f"/api/calls/{call.id}")).json()["updated_at"]
+
+    resp = await client.patch(f"/api/calls/{call.id}/notes", json={"notes": "  x  "})
+
+    assert resp.status_code == 200
+    assert resp.json()["notes"] == "x"
+    assert resp.json()["updated_at"] == before
+
+
 async def test_patch_notes_multiline_roundtrip(client, make_call):
     call = await make_call()
     notes = "line 1\nline 2\n\nline 4"

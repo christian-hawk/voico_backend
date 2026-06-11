@@ -3,6 +3,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
+from pydantic import field_validator
 from sqlmodel import Column, DateTime, Field, SQLModel
 
 
@@ -68,6 +69,13 @@ class WebhookCallPayload(SQLModel):
 
 class UpdateNotesRequest(SQLModel):
     notes: Optional[str]
+
+    @field_validator("notes", mode="before")
+    @classmethod
+    def _strip_to_none(cls, value: object) -> object:
+        if isinstance(value, str):
+            return value.strip() or None
+        return value
 
 
 class CallResponse(SQLModel):
