@@ -100,6 +100,16 @@ async def test_patch_notes_noop_after_normalization(client, make_call):
     assert resp.json()["updated_at"] == before
 
 
+async def test_patch_notes_over_max_length_returns_422(client, make_call):
+    call = await make_call()
+
+    at_limit = await client.patch(f"/api/calls/{call.id}/notes", json={"notes": "x" * 10_000})
+    over_limit = await client.patch(f"/api/calls/{call.id}/notes", json={"notes": "x" * 10_001})
+
+    assert at_limit.status_code == 200
+    assert over_limit.status_code == 422
+
+
 async def test_patch_notes_multiline_roundtrip(client, make_call):
     call = await make_call()
     notes = "line 1\nline 2\n\nline 4"

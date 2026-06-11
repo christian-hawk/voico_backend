@@ -68,7 +68,7 @@ class WebhookCallPayload(SQLModel):
 
 
 class UpdateNotesRequest(SQLModel):
-    notes: Optional[str]
+    notes: Optional[str] = Field(max_length=10_000)
 
     @field_validator("notes", mode="before")
     @classmethod
