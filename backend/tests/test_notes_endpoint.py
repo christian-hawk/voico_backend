@@ -60,6 +60,17 @@ async def test_patch_notes_unknown_id_returns_404(client):
     assert resp.json()["detail"] == "Call not found"
 
 
+async def test_patch_notes_noop_preserves_updated_at(client, make_call):
+    call = await make_call()
+
+    first = await client.patch(f"/api/calls/{call.id}/notes", json={"notes": "a note"})
+    second = await client.patch(f"/api/calls/{call.id}/notes", json={"notes": "a note"})
+
+    assert second.status_code == 200
+    assert second.json()["notes"] == "a note"
+    assert second.json()["updated_at"] == first.json()["updated_at"]
+
+
 async def test_patch_notes_multiline_roundtrip(client, make_call):
     call = await make_call()
     notes = "line 1\nline 2\n\nline 4"

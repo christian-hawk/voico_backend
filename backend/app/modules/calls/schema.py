@@ -49,7 +49,7 @@ class Call(SQLModel, table=True):
     )
     updated_at: datetime = Field(
         default_factory=datetime.utcnow,
-        sa_column=Column(DateTime, nullable=False),
+        sa_column=Column(DateTime, nullable=False, onupdate=datetime.utcnow),
     )
     raw_transcript: Optional[str] = Field(default=None)
     notes: Optional[str] = Field(default=None)

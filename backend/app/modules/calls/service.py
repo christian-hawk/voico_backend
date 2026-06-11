@@ -1,6 +1,5 @@
 import logging
 import uuid
-from datetime import datetime
 from typing import Optional
 
 from fastapi import HTTPException, status
@@ -56,6 +55,5 @@ class CallService:
     async def update_notes(self, call_id: uuid.UUID, notes: Optional[str]) -> CallResponse:
         call = await self._get_call_or_404(call_id)
         call.notes = notes
-        call.updated_at = datetime.utcnow()
         call = await self.repository.update(call)
         return CallResponse.model_validate(call, from_attributes=True)
