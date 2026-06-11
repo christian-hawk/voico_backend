@@ -1,5 +1,6 @@
 import logging
 import uuid
+from datetime import datetime
 from typing import Optional
 
 from fastapi import HTTPException, status
@@ -45,4 +46,13 @@ class CallService:
         call = await self.repository.get_by_id(call_id)
         if call is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Call not found")
+        return CallResponse.model_validate(call, from_attributes=True)
+
+    async def update_notes(self, call_id: uuid.UUID, notes: Optional[str]) -> CallResponse:
+        call = await self.repository.get_by_id(call_id)
+        if call is None:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Call not found")
+        call.notes = notes
+        call.updated_at = datetime.utcnow()
+        call = await self.repository.update(call)
         return CallResponse.model_validate(call, from_attributes=True)
