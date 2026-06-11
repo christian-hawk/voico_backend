@@ -52,6 +52,7 @@ class Call(SQLModel, table=True):
         sa_column=Column(DateTime, nullable=False),
     )
     raw_transcript: Optional[str] = Field(default=None)
+    notes: Optional[str] = Field(default=None)
 
 
 # --- Request / Response schemas ---
