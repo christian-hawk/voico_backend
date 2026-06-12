@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from app.modules.calls.schema import CallLabel, CallStatus
 
 URL = "/api/calls"
@@ -229,3 +231,127 @@ async def test_page_beyond_filtered_range_returns_empty(client, make_call):
     assert resp.status_code == 200
     assert body["data"] == []
     assert body["total"] == 1
+
+
+async def test_sort_duration_asc_puts_nulls_last(client, make_call):
+    await make_call(duration_seconds=300)
+    await make_call(duration_seconds=100)
+    await make_call(duration_seconds=None)
+
+    resp = await client.get(URL, params={"sort_by": "duration_seconds", "sort_dir": "asc"})
+
+    assert [c["duration_seconds"] for c in resp.json()["data"]] == [100, 300, None]
+
+
+async def test_sort_duration_desc_puts_nulls_last(client, make_call):
+    await make_call(duration_seconds=300)
+    await make_call(duration_seconds=100)
+    await make_call(duration_seconds=None)
+
+    resp = await client.get(URL, params={"sort_by": "duration_seconds", "sort_dir": "desc"})
+
+    assert [c["duration_seconds"] for c in resp.json()["data"]] == [300, 100, None]
+
+
+async def test_sort_caller_name_puts_nulls_last(client, make_call):
+    await make_call(caller_name="Bob Stone")
+    await make_call(caller_name="Alice Reed")
+    await make_call(caller_name=None)
+
+    resp = await client.get(URL, params={"sort_by": "caller_name", "sort_dir": "asc"})
+
+    assert [c["caller_name"] for c in resp.json()["data"]] == ["Alice Reed", "Bob Stone", None]
+
+
+async def test_sort_by_label_orders_alphabetically(client, make_call):
+    # the DB stores enum member names; their alphabetical order happens to
+    # coincide with the display values' order for the current six labels
+    await make_call(label=CallLabel.support)
+    await make_call(label=CallLabel.appointment)
+    await make_call(label=CallLabel.complaint)
+    await make_call(label=None)
+
+    resp = await client.get(URL, params={"sort_by": "label", "sort_dir": "asc"})
+
+    assert [c["label"] for c in resp.json()["data"]] == [
+        "Appointment",
+        "Complaint",
+        "Support",
+        None,
+    ]
+
+
+async def test_sort_by_invalid_returns_422(client, make_call):
+    await make_call()
+
+    resp = await client.get(URL, params={"sort_by": "created_at"})
+
+    assert resp.status_code == 422
+
+
+async def test_sort_dir_invalid_returns_422(client, make_call):
+    await make_call()
+
+    resp = await client.get(URL, params={"sort_by": "caller_name", "sort_dir": "sideways"})
+
+    assert resp.status_code == 422
+
+
+async def test_sort_dir_without_sort_by_keeps_default_order(client, make_call):
+    older = await make_call(created_at=datetime(2026, 1, 1, 10, 0, 0))
+    newer = await make_call(created_at=datetime(2026, 1, 2, 10, 0, 0))
+
+    resp = await client.get(URL, params={"sort_dir": "desc"})
+
+    ids = [c["id"] for c in resp.json()["data"]]
+    assert ids == [str(newer.id), str(older.id)]
+
+
+async def test_sort_by_without_sort_dir_defaults_to_asc(client, make_call):
+    await make_call(duration_seconds=200)
+    await make_call(duration_seconds=100)
+
+    resp = await client.get(URL, params={"sort_by": "duration_seconds"})
+
+    assert [c["duration_seconds"] for c in resp.json()["data"]] == [100, 200]
+
+
+async def test_default_order_is_newest_first(client, make_call):
+    older = await make_call(created_at=datetime(2026, 1, 1, 10, 0, 0))
+    newer = await make_call(created_at=datetime(2026, 1, 2, 10, 0, 0))
+
+    resp = await client.get(URL)
+
+    ids = [c["id"] for c in resp.json()["data"]]
+    assert ids == [str(newer.id), str(older.id)]
+
+
+async def test_sort_pagination_is_stable_across_ties(client, make_call):
+    expected = set()
+    for _ in range(5):
+        call = await make_call(duration_seconds=100)
+        expected.add(str(call.id))
+
+    seen: set[str] = set()
+    for page in [1, 2, 3]:
+        resp = await client.get(
+            URL,
+            params={"sort_by": "duration_seconds", "page": page, "page_size": 2},
+        )
+        seen.update(c["id"] for c in resp.json()["data"])
+
+    assert seen == expected
+
+
+async def test_counts_stay_global_under_filters(client, make_call):
+    # decided behavior: counts have no documented use case under filters,
+    # so they keep the cheapest semantics (always global; only total filters)
+    await make_call(caller_name="Jane Doe", status=CallStatus.success)
+    await make_call(caller_name="Someone Else", status=CallStatus.success)
+    await make_call(caller_name="Another One", status=CallStatus.failed)
+
+    resp = await client.get(URL, params={"caller_name": "jane"})
+
+    body = resp.json()
+    assert body["total"] == 1
+    assert body["counts"] == {"in_progress": 0, "success": 2, "failed": 1}
