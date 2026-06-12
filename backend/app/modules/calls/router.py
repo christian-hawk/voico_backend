@@ -11,6 +11,7 @@ from app.modules.calls.schema import (
     CallResponse,
     CallStatus,
     PaginatedCallsResponse,
+    UpdateNotesRequest,
     WebhookCallPayload,
 )
 from app.modules.calls.service import CallService
@@ -48,6 +49,17 @@ async def get_call(
     service: Annotated[CallService, Depends(get_call_service)],
 ) -> CallResponse:
     return await service.get_call(call_id)
+
+
+@router.patch("/calls/{call_id}/notes", response_model=CallResponse)
+@session_manager
+async def update_call_notes(
+    call_id: uuid.UUID,
+    payload: UpdateNotesRequest,
+    session: SessionDep,
+    service: Annotated[CallService, Depends(get_call_service)],
+) -> CallResponse:
+    return await service.update_notes(call_id, payload.notes)
 
 
 @router.post("/webhook/call", response_model=CallResponse)

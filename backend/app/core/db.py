@@ -1,17 +1,22 @@
-from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.config import settings
 
-engine = create_async_engine(
-    settings.database_url,
-    echo=False,
-    connect_args={"check_same_thread": False},
-)
 
-async_session = sessionmaker(  # type: ignore[call-overload]
-    bind=engine,
-    class_=AsyncSession,
-    expire_on_commit=False,
-)
+def create_engine_and_session_factory(url: str) -> tuple[AsyncEngine, sessionmaker]:
+    engine = create_async_engine(
+        url,
+        echo=False,
+        connect_args={"check_same_thread": False},
+    )
+    session_factory = sessionmaker(  # type: ignore[call-overload]
+        bind=engine,
+        class_=AsyncSession,
+        expire_on_commit=False,
+    )
+    return engine, session_factory
+
+
+engine, async_session = create_engine_and_session_factory(settings.database_url)
