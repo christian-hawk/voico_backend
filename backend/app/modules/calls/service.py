@@ -8,12 +8,18 @@ from app.modules.calls.repository import CallRepository
 from app.modules.calls.schema import (
     Call,
     CallCounts,
+    CallLabel,
     CallResponse,
     CallStatus,
     PaginatedCallsResponse,
+    SortDir,
+    SortField,
 )
 
 logger = logging.getLogger(__name__)
+
+# the status param shadows fastapi.status inside list_calls
+_HTTP_422 = status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 class CallService:
@@ -25,9 +31,30 @@ class CallService:
         status: Optional[CallStatus],
         page: int,
         page_size: int,
+        caller_name: Optional[str] = None,
+        phone_number: Optional[str] = None,
+        label: Optional[CallLabel] = None,
+        min_duration: Optional[int] = None,
+        max_duration: Optional[int] = None,
+        sort_by: Optional[SortField] = None,
+        sort_dir: SortDir = SortDir.asc,
     ) -> PaginatedCallsResponse:
+        if min_duration is not None and max_duration is not None and min_duration > max_duration:
+            raise HTTPException(
+                status_code=_HTTP_422,
+                detail="min_duration cannot exceed max_duration",
+            )
         calls, total, total_pages, counts = await self.repository.list_calls(
-            status, page, page_size
+            status,
+            page,
+            page_size,
+            caller_name=caller_name,
+            phone_number=phone_number,
+            label=label,
+            min_duration=min_duration,
+            max_duration=max_duration,
+            sort_by=sort_by,
+            sort_dir=sort_dir,
         )
         return PaginatedCallsResponse(
             data=[CallResponse.model_validate(c, from_attributes=True) for c in calls],
