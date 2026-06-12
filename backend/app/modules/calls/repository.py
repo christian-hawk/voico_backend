@@ -5,10 +5,12 @@ from typing import Any, Optional
 from sqlmodel import col, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from app.modules.calls.schema import Call, CallLabel, CallStatus
+from app.modules.calls.schema import Call, CallLabel, CallStatus, SortDir, SortField
 
 _LIKE_ESCAPE = "\\"
 _PHONE_SEPARATORS = "+() -"
+# SortField values are column names by construction
+_NULLABLE_SORT_FIELDS = {SortField.caller_name, SortField.label, SortField.duration_seconds}
 
 
 def _escape_like(term: str) -> str:
@@ -42,6 +44,8 @@ class CallRepository:
         label: Optional[CallLabel] = None,
         min_duration: Optional[int] = None,
         max_duration: Optional[int] = None,
+        sort_by: Optional[SortField] = None,
+        sort_dir: SortDir = SortDir.asc,
     ) -> tuple[list[Call], int, int, dict[str, int]]:
         conditions: list[Any] = []
         if status is not None:
@@ -83,8 +87,19 @@ class CallRepository:
             ).one()
             counts[s.value] = c
 
+        # created_at desc + id keep pagination stable across ties in any ordering
+        tie_breakers = (col(Call.created_at).desc(), col(Call.id))
+        if sort_by is not None:
+            sort_column = col(getattr(Call, sort_by.value))
+            ordering = sort_column.desc() if sort_dir is SortDir.desc else sort_column.asc()
+            if sort_by in _NULLABLE_SORT_FIELDS:
+                ordering = ordering.nulls_last()
+            query = query.order_by(ordering, *tie_breakers)
+        else:
+            query = query.order_by(*tie_breakers)
+
         offset = (page - 1) * page_size
-        query = query.order_by(Call.created_at.desc()).offset(offset).limit(page_size)  # type: ignore[attr-defined]
+        query = query.offset(offset).limit(page_size)
         result = await self.session.exec(query)
         calls = list(result.all())
 
