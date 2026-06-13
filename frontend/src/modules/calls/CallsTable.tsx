@@ -105,6 +105,13 @@ export function CallsTable({ calls, onRowClick, sort, onSortChange }: CallsTable
             {COLUMNS.map((column) => (
               <th
                 key={column.field}
+                aria-sort={
+                  sort?.by === column.field
+                    ? sort.dir === "asc"
+                      ? "ascending"
+                      : "descending"
+                    : "none"
+                }
                 className="text-left py-3 px-4 text-xs font-medium text-muted-foreground"
               >
                 <button
