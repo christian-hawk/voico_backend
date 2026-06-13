@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import { RefreshCw, Phone } from "lucide-react";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { callsApi } from "@/services/api";
@@ -81,6 +81,7 @@ export function CallsPage() {
     queryKey: ["calls", queryParams],
     queryFn: () => callsApi.list(queryParams),
     refetchInterval: 5000,
+    placeholderData: keepPreviousData,
   });
 
   function handleTabChange(tab: TabValue) {
