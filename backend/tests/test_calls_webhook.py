@@ -109,6 +109,29 @@ async def test_webhook_skips_enrichment_when_in_progress(client, make_call):
     assert resp.json()["summary"] is None
 
 
+async def test_webhook_skips_enrichment_on_redelivery(client, make_call):
+    call = await make_call()
+    enrich_calls = 0
+
+    def _spy(summary):
+        async def _enrich(transcript: str) -> CallEnrichment:
+            nonlocal enrich_calls
+            enrich_calls += 1
+            return CallEnrichment(summary=summary, label=CallLabel.support)
+
+        return _enrich
+
+    app.dependency_overrides[get_enricher] = lambda: _spy("first summary")
+    first = await client.post(URL, json=_payload(call.id))
+    assert first.json()["summary"] == "first summary"
+
+    app.dependency_overrides[get_enricher] = lambda: _spy("second summary")
+    redelivered = await client.post(URL, json=_payload(call.id))
+
+    assert enrich_calls == 1
+    assert redelivered.json()["summary"] == "first summary"
+
+
 async def test_webhook_persists_on_openai_failure(client, make_call):
     call = await make_call()
 

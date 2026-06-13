@@ -110,7 +110,11 @@ class CallService:
 
     @staticmethod
     def _transcript_to_enrich(call: Call) -> str | None:
-        if call.raw_transcript and call.status in (CallStatus.success, CallStatus.failed):
+        if (
+            call.summary is None
+            and call.raw_transcript
+            and call.status in (CallStatus.success, CallStatus.failed)
+        ):
             return call.raw_transcript
         return None
 
