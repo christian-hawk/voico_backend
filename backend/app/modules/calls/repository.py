@@ -1,7 +1,9 @@
 import math
 import uuid
+from datetime import datetime
 from typing import Any, Optional
 
+from sqlalchemy import update
 from sqlmodel import col, func, select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
@@ -109,3 +111,12 @@ class CallRepository:
         await self.session.flush()
         await self.session.refresh(call)
         return call
+
+    async def expire_stale_calls(self, cutoff: datetime) -> int:
+        stmt = (
+            update(Call)
+            .where(col(Call.status) == CallStatus.in_progress, col(Call.started_at) < cutoff)
+            .values(status=CallStatus.failed)
+        )
+        result = await self.session.exec(stmt)
+        return result.rowcount
