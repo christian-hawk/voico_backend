@@ -101,12 +101,9 @@ class CallService:
     @staticmethod
     def _apply_outcome(call: Call, payload: WebhookCallPayload) -> None:
         call.status = payload.status
-        if payload.duration_seconds is not None:
-            call.duration_seconds = payload.duration_seconds
-        if payload.raw_transcript is not None:
-            call.raw_transcript = payload.raw_transcript
-        if payload.ended_at is not None:
-            call.ended_at = payload.ended_at
+        call.duration_seconds = payload.duration_seconds
+        call.raw_transcript = payload.raw_transcript
+        call.ended_at = payload.ended_at
 
     @staticmethod
     def _transcript_to_enrich(call: Call) -> str | None:
