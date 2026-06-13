@@ -107,115 +107,118 @@ export function CallDetailDrawer({ call, onClose, onCallUpdated }: CallDetailDra
           )}
         </div>
 
-        {/* Content */}
-        <div className="flex-1 overflow-y-auto px-6 py-4">
-          <DetailRow
-            icon={<Phone className="h-4 w-4" />}
-            label="Phone Number"
-            value={<span className="font-mono">{call.phone_number}</span>}
-          />
-          <DetailRow
-            icon={<User className="h-4 w-4" />}
-            label="Caller Name"
-            value={call.caller_name ?? "Unknown"}
-          />
-          <DetailRow
-            icon={<Clock className="h-4 w-4" />}
-            label="Duration"
-            value={formatDuration(call.duration_seconds)}
-          />
-          <DetailRow
-            icon={<Calendar className="h-4 w-4" />}
-            label="Started At"
-            value={format(new Date(call.started_at), "PPpp")}
-          />
-          {call.ended_at && (
+        {/* Scrollable body: details, summary, transcript and notes scroll together,
+            so a long note can't collapse the details or push the footer out of reach */}
+        <div className="flex-1 overflow-y-auto">
+          <div className="px-6 py-4">
+            <DetailRow
+              icon={<Phone className="h-4 w-4" />}
+              label="Phone Number"
+              value={<span className="font-mono">{call.phone_number}</span>}
+            />
+            <DetailRow
+              icon={<User className="h-4 w-4" />}
+              label="Caller Name"
+              value={call.caller_name ?? "Unknown"}
+            />
+            <DetailRow
+              icon={<Clock className="h-4 w-4" />}
+              label="Duration"
+              value={formatDuration(call.duration_seconds)}
+            />
             <DetailRow
               icon={<Calendar className="h-4 w-4" />}
-              label="Ended At"
-              value={format(new Date(call.ended_at), "PPpp")}
+              label="Started At"
+              value={format(new Date(call.started_at), "PPpp")}
             />
-          )}
-        </div>
-
-        {/* AI Summary */}
-        {call.summary && (
-          <div className="px-6 py-4 border-t border-border">
-            <div className="flex items-center gap-2 mb-2">
-              <Sparkles className="h-4 w-4" style={{ color: "#FDDF5C" }} />
-              <h3 className="text-sm font-semibold text-foreground">AI Summary</h3>
-            </div>
-            <p className="text-sm text-muted-foreground leading-relaxed">{call.summary}</p>
-          </div>
-        )}
-
-        {/* Transcript */}
-        {call.raw_transcript && (
-          <div className="px-6 py-4 border-t border-border">
-            <div className="flex items-center gap-2 mb-2">
-              <FileText className="h-4 w-4 text-muted-foreground" />
-              <h3 className="text-sm font-semibold text-foreground">Transcript</h3>
-            </div>
-            <div className="bg-muted rounded-lg p-3 max-h-48 overflow-y-auto">
-              <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
-                {call.raw_transcript}
-              </pre>
-            </div>
-          </div>
-        )}
-
-        {/* Notes */}
-        <div className="px-6 py-4 border-t border-border">
-          <div className="flex items-center gap-2 mb-2">
-            <StickyNote className="h-4 w-4 text-muted-foreground" />
-            <h3 className="text-sm font-semibold text-foreground">Notes</h3>
-          </div>
-          {isEditing ? (
-            <div className="space-y-2">
-              <Textarea
-                autoFocus
-                value={draft}
-                placeholder="Add notes…"
-                disabled={notesMutation.isPending}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Escape" && !notesMutation.isPending) cancelEditing();
-                }}
+            {call.ended_at && (
+              <DetailRow
+                icon={<Calendar className="h-4 w-4" />}
+                label="Ended At"
+                value={format(new Date(call.ended_at), "PPpp")}
               />
-              {notesMutation.isError && (
-                <p className="text-xs text-red-500">Failed to save notes. Try again.</p>
-              )}
-              <div className="flex items-center gap-2">
-                <Button size="sm" onClick={saveNotes} disabled={notesMutation.isPending}>
-                  Save
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={cancelEditing}
-                  disabled={notesMutation.isPending}
-                >
-                  Cancel
-                </Button>
+            )}
+          </div>
+
+          {/* AI Summary */}
+          {call.summary && (
+            <div className="px-6 py-4 border-t border-border">
+              <div className="flex items-center gap-2 mb-2">
+                <Sparkles className="h-4 w-4" style={{ color: "#FDDF5C" }} />
+                <h3 className="text-sm font-semibold text-foreground">AI Summary</h3>
+              </div>
+              <p className="text-sm text-muted-foreground leading-relaxed">{call.summary}</p>
+            </div>
+          )}
+
+          {/* Transcript */}
+          {call.raw_transcript && (
+            <div className="px-6 py-4 border-t border-border">
+              <div className="flex items-center gap-2 mb-2">
+                <FileText className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold text-foreground">Transcript</h3>
+              </div>
+              <div className="bg-muted rounded-lg p-3 max-h-48 overflow-y-auto">
+                <pre className="text-xs text-muted-foreground whitespace-pre-wrap font-mono leading-relaxed">
+                  {call.raw_transcript}
+                </pre>
               </div>
             </div>
-          ) : call.notes ? (
-            <button
-              type="button"
-              onClick={startEditing}
-              className="w-full text-left text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap hover:bg-muted/50 rounded-md transition-colors"
-            >
-              {call.notes}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={startEditing}
-              className="text-sm text-muted-foreground italic hover:text-foreground transition-colors"
-            >
-              Add notes…
-            </button>
           )}
+
+          {/* Notes */}
+          <div className="px-6 py-4 border-t border-border">
+            <div className="flex items-center gap-2 mb-2">
+              <StickyNote className="h-4 w-4 text-muted-foreground" />
+              <h3 className="text-sm font-semibold text-foreground">Notes</h3>
+            </div>
+            {isEditing ? (
+              <div className="space-y-2">
+                <Textarea
+                  autoFocus
+                  value={draft}
+                  placeholder="Add notes…"
+                  disabled={notesMutation.isPending}
+                  onChange={(e) => setDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Escape" && !notesMutation.isPending) cancelEditing();
+                  }}
+                />
+                {notesMutation.isError && (
+                  <p className="text-xs text-red-500">Failed to save notes. Try again.</p>
+                )}
+                <div className="flex items-center gap-2">
+                  <Button size="sm" onClick={saveNotes} disabled={notesMutation.isPending}>
+                    Save
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={cancelEditing}
+                    disabled={notesMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            ) : call.notes ? (
+              <button
+                type="button"
+                onClick={startEditing}
+                className="w-full text-left text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap hover:bg-muted/50 rounded-md transition-colors"
+              >
+                {call.notes}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={startEditing}
+                className="text-sm text-muted-foreground italic hover:text-foreground transition-colors"
+              >
+                Add notes…
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Footer */}
