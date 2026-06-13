@@ -168,9 +168,16 @@ export function CallDetailDrawer({ call, onClose, onCallUpdated }: CallDetailDra
 
           {/* Notes */}
           <div className="px-6 py-4 border-t border-border">
-            <div className="flex items-center gap-2 mb-2">
-              <StickyNote className="h-4 w-4 text-muted-foreground" />
-              <h3 className="text-sm font-semibold text-foreground">Notes</h3>
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-2">
+                <StickyNote className="h-4 w-4 text-muted-foreground" />
+                <h3 className="text-sm font-semibold text-foreground">Notes</h3>
+              </div>
+              {!isEditing && call.notes && (
+                <Button variant="ghost" size="sm" onClick={startEditing}>
+                  Edit
+                </Button>
+              )}
             </div>
             {isEditing ? (
               <div className="space-y-2">
@@ -202,13 +209,9 @@ export function CallDetailDrawer({ call, onClose, onCallUpdated }: CallDetailDra
                 </div>
               </div>
             ) : call.notes ? (
-              <button
-                type="button"
-                onClick={startEditing}
-                className="w-full text-left text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap hover:bg-muted/50 rounded-md transition-colors"
-              >
+              <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">
                 {call.notes}
-              </button>
+              </p>
             ) : (
               <button
                 type="button"
