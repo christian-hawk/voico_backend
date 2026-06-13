@@ -176,9 +176,10 @@ export function CallDetailDrawer({ call, onClose, onCallUpdated }: CallDetailDra
                 autoFocus
                 value={draft}
                 placeholder="Add notes…"
+                disabled={notesMutation.isPending}
                 onChange={(e) => setDraft(e.target.value)}
                 onKeyDown={(e) => {
-                  if (e.key === "Escape") cancelEditing();
+                  if (e.key === "Escape" && !notesMutation.isPending) cancelEditing();
                 }}
               />
               {notesMutation.isError && (
