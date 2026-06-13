@@ -91,6 +91,15 @@ class CallService:
 
     async def process_webhook(self, payload: WebhookCallPayload) -> CallResponse:
         call = await self._get_call_or_404(payload.call_id)
+        self._apply_outcome(call, payload)
+        transcript = self._transcript_to_enrich(call)
+        if transcript is not None:
+            await self._enrich(call, transcript)
+        call = await self.repository.update(call)
+        return CallResponse.model_validate(call, from_attributes=True)
+
+    @staticmethod
+    def _apply_outcome(call: Call, payload: WebhookCallPayload) -> None:
         call.status = payload.status
         if payload.duration_seconds is not None:
             call.duration_seconds = payload.duration_seconds
@@ -98,10 +107,15 @@ class CallService:
             call.raw_transcript = payload.raw_transcript
         if payload.ended_at is not None:
             call.ended_at = payload.ended_at
-        if payload.status in (CallStatus.success, CallStatus.failed) and payload.raw_transcript:
-            enrichment = await self.enricher(payload.raw_transcript)
-            if enrichment is not None:
-                call.summary = enrichment.summary
-                call.label = enrichment.label
-        call = await self.repository.update(call)
-        return CallResponse.model_validate(call, from_attributes=True)
+
+    @staticmethod
+    def _transcript_to_enrich(call: Call) -> str | None:
+        if call.raw_transcript and call.status in (CallStatus.success, CallStatus.failed):
+            return call.raw_transcript
+        return None
+
+    async def _enrich(self, call: Call, transcript: str) -> None:
+        enrichment = await self.enricher(transcript)
+        if enrichment is not None:
+            call.summary = enrichment.summary
+            call.label = enrichment.label
