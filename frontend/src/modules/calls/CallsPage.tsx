@@ -20,11 +20,15 @@ const EMPTY_FILTERS: FilterValues = {
   maxDuration: "",
 };
 
+// only a non-negative integer reaches the API; blank, negative or decimal
+// is dropped so it can't 422 the backend's ge=0 int param (Number("") is 0,
+// so the empty case must be guarded before the integer check)
 function toIntParam(value: string): number | undefined {
   const trimmed = value.trim();
   if (trimmed === "") return undefined;
   const parsed = Number(trimmed);
-  return Number.isFinite(parsed) ? parsed : undefined;
+  if (!Number.isInteger(parsed) || parsed < 0) return undefined;
+  return parsed;
 }
 
 const TABS: { label: string; value: TabValue }[] = [
