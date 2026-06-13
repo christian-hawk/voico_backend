@@ -1,10 +1,13 @@
+import asyncio
 import logging
+from contextlib import suppress
 from datetime import datetime, timedelta
 
 from app.core.config import settings
+from app.main import app, lifespan
 from app.modules.calls.repository import CallRepository
 from app.modules.calls.schema import CallStatus
-from app.modules.calls.tasks import expire_stale_calls_once
+from app.modules.calls.tasks import expire_stale_calls_once, stale_call_expiry_loop
 
 THRESHOLD = timedelta(minutes=30)
 
@@ -135,3 +138,42 @@ async def test_threshold_is_configurable(test_session_factory, make_call, monkey
     count = await expire_stale_calls_once()
 
     assert count == 1
+
+
+async def test_loop_survives_failures(monkeypatch):
+    calls = 0
+
+    async def fake_once() -> int:
+        nonlocal calls
+        calls += 1
+        if calls == 1:
+            raise RuntimeError("boom")
+        return 0
+
+    monkeypatch.setattr("app.modules.calls.tasks.expire_stale_calls_once", fake_once)
+    monkeypatch.setattr(settings, "stale_expiry_interval_seconds", 0)
+
+    task = asyncio.create_task(stale_call_expiry_loop())
+    await asyncio.sleep(0.05)
+    task.cancel()
+    with suppress(asyncio.CancelledError):
+        await task
+
+    assert calls > 1  # kept running after the first run raised
+
+
+async def test_lifespan_starts_and_cancels_job(monkeypatch):
+    started = False
+
+    async def fake_loop() -> None:
+        nonlocal started
+        started = True
+        await asyncio.sleep(3600)
+
+    monkeypatch.setattr("app.main.stale_call_expiry_loop", fake_loop)
+
+    async with lifespan(app):
+        await asyncio.sleep(0.01)
+        assert started
+
+    # exiting the context cancels the task without raising
