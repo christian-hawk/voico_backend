@@ -64,6 +64,8 @@ Interactive docs: `http://localhost:8000/docs`
 |----------|-------------|
 | `DATABASE_URL` | SQLite database path (default: `sqlite+aiosqlite:///./db.sqlite3`) |
 | `OPENAI_API_KEY` | OpenAI API key — needed for Task 4 |
+| `STALE_EXPIRY_INTERVAL_SECONDS` | Seconds between stale-call sweeps (default: `600`) |
+| `STALE_EXPIRY_THRESHOLD_SECONDS` | Age after which an `in_progress` call is marked `failed` (default: `1800`) |
 
 ---
 
