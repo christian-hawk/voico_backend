@@ -1,4 +1,5 @@
 import uuid
+from types import SimpleNamespace
 
 from app.core.config import settings
 from app.main import app
@@ -30,6 +31,30 @@ def _fake_enrichment(summary="A short summary.", label=CallLabel.support):
 
 def _raising_client(*args, **kwargs):
     raise RuntimeError("api down")
+
+
+def _fake_openai(response):
+    async def _parse(**kwargs):
+        return response
+
+    class _Client:
+        chat = SimpleNamespace(completions=SimpleNamespace(parse=_parse))
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *exc):
+            return False
+
+    def _factory(*args, **kwargs):
+        return _Client()
+
+    return _factory
+
+
+def _response_with_parsed(parsed):
+    message = SimpleNamespace(parsed=parsed)
+    return SimpleNamespace(choices=[SimpleNamespace(message=message)])
 
 
 async def test_webhook_updates_call_fields(client, make_call):
@@ -196,6 +221,40 @@ async def test_webhook_unknown_call_returns_404(client):
 async def test_enrich_call_returns_none_on_client_error(monkeypatch):
     monkeypatch.setattr(settings, "openai_api_key", "sk-test")
     monkeypatch.setattr("app.modules.calls.ai.AsyncOpenAI", _raising_client)
+
+    result = await enrich_call("Agent: hi\nCaller: bye")
+
+    assert result is None
+
+
+async def test_enrich_call_returns_parsed_enrichment(monkeypatch):
+    monkeypatch.setattr(settings, "openai_api_key", "sk-test")
+    enrichment = CallEnrichment(summary="A short summary.", label=CallLabel.support)
+    monkeypatch.setattr(
+        "app.modules.calls.ai.AsyncOpenAI", _fake_openai(_response_with_parsed(enrichment))
+    )
+
+    result = await enrich_call("Agent: hi\nCaller: bye")
+
+    assert result == enrichment
+
+
+async def test_enrich_call_returns_none_when_parsed_is_none(monkeypatch):
+    monkeypatch.setattr(settings, "openai_api_key", "sk-test")
+    monkeypatch.setattr(
+        "app.modules.calls.ai.AsyncOpenAI", _fake_openai(_response_with_parsed(None))
+    )
+
+    result = await enrich_call("Agent: hi\nCaller: bye")
+
+    assert result is None
+
+
+async def test_enrich_call_returns_none_on_empty_choices(monkeypatch):
+    monkeypatch.setattr(settings, "openai_api_key", "sk-test")
+    monkeypatch.setattr(
+        "app.modules.calls.ai.AsyncOpenAI", _fake_openai(SimpleNamespace(choices=[]))
+    )
 
     result = await enrich_call("Agent: hi\nCaller: bye")
 

@@ -42,6 +42,9 @@ async def enrich_call(transcript: str) -> CallEnrichment | None:
                 ],
                 response_format=CallEnrichment,
             )
+        if not response.choices:
+            logger.warning("OpenAI returned no choices")
+            return None
         parsed = response.choices[0].message.parsed
         if parsed is None:
             logger.warning("OpenAI returned no parsed enrichment")
