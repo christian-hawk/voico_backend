@@ -7,6 +7,8 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./db.sqlite3"
     openai_api_key: str = ""
     app_name: str = "Voico Calls Dashboard"
+    stale_expiry_interval_seconds: int = 600
+    stale_expiry_threshold_seconds: int = 1800
 
 
 settings = Settings()
