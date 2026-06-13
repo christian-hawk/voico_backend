@@ -4,6 +4,7 @@ from typing import Optional
 
 from fastapi import HTTPException, status
 
+from app.modules.calls.ai import enrich_call
 from app.modules.calls.repository import CallRepository
 from app.modules.calls.schema import (
     Call,
@@ -14,6 +15,7 @@ from app.modules.calls.schema import (
     PaginatedCallsResponse,
     SortDir,
     SortField,
+    WebhookCallPayload,
 )
 
 logger = logging.getLogger(__name__)
@@ -84,4 +86,21 @@ class CallService:
         if call.notes != notes:
             call.notes = notes
             call = await self.repository.update(call)
+        return CallResponse.model_validate(call, from_attributes=True)
+
+    async def process_webhook(self, payload: WebhookCallPayload) -> CallResponse:
+        call = await self._get_call_or_404(payload.call_id)
+        call.status = payload.status
+        if payload.duration_seconds is not None:
+            call.duration_seconds = payload.duration_seconds
+        if payload.raw_transcript is not None:
+            call.raw_transcript = payload.raw_transcript
+        if payload.ended_at is not None:
+            call.ended_at = payload.ended_at
+        if payload.status in (CallStatus.success, CallStatus.failed) and payload.raw_transcript:
+            enrichment = await enrich_call(payload.raw_transcript)
+            if enrichment is not None:
+                call.summary = enrichment.summary
+                call.label = enrichment.label
+        call = await self.repository.update(call)
         return CallResponse.model_validate(call, from_attributes=True)
