@@ -1,8 +1,9 @@
+import logging
 import uuid
 from types import SimpleNamespace
 
 from app.core.config import settings
-from app.main import app
+from app.main import app, lifespan
 from app.modules.calls.ai import CallEnrichment, enrich_call
 from app.modules.calls.router import get_enricher
 from app.modules.calls.schema import CallLabel
@@ -259,3 +260,13 @@ async def test_enrich_call_returns_none_on_empty_choices(monkeypatch):
     result = await enrich_call("Agent: hi\nCaller: bye")
 
     assert result is None
+
+
+async def test_startup_warns_when_openai_key_missing(monkeypatch, caplog):
+    monkeypatch.setattr(settings, "openai_api_key", "")
+
+    with caplog.at_level(logging.WARNING):
+        async with lifespan(app):
+            pass
+
+    assert "OPENAI_API_KEY not set" in caplog.text

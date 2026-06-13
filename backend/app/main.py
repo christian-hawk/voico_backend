@@ -15,9 +15,13 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
 )
 
+logger = logging.getLogger(__name__)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    if not settings.openai_api_key:
+        logger.warning("OPENAI_API_KEY not set; call enrichment is disabled")
     task = asyncio.create_task(stale_call_expiry_loop())
     yield
     task.cancel()

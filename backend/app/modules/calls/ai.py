@@ -30,7 +30,7 @@ Enricher = Callable[[str], Awaitable[CallEnrichment | None]]
 
 async def enrich_call(transcript: str) -> CallEnrichment | None:
     if not settings.openai_api_key:
-        logger.warning("OPENAI_API_KEY not set; skipping enrichment")
+        logger.debug("OPENAI_API_KEY not set; skipping enrichment")
         return None
     try:
         async with AsyncOpenAI(api_key=settings.openai_api_key) as client:
