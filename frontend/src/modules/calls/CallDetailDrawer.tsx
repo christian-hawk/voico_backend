@@ -58,6 +58,15 @@ export function CallDetailDrawer({ call, onClose, onCallUpdated }: CallDetailDra
 
   if (!call) return null;
 
+  const isDirty = isEditing && draft !== (call.notes ?? "");
+
+  // the overlay and the X close the whole drawer; confirm first so an accidental
+  // click doesn't silently drop an in-progress edit
+  const requestClose = () => {
+    if (isDirty && !window.confirm("Discard your unsaved note?")) return;
+    onClose();
+  };
+
   const startEditing = () => {
     notesMutation.reset();
     setDraft(call.notes ?? "");
@@ -78,7 +87,7 @@ export function CallDetailDrawer({ call, onClose, onCallUpdated }: CallDetailDra
     <>
       <div
         className="fixed inset-0 bg-black/20 z-40 transition-opacity"
-        onClick={onClose}
+        onClick={requestClose}
         aria-hidden="true"
       />
 
@@ -90,7 +99,7 @@ export function CallDetailDrawer({ call, onClose, onCallUpdated }: CallDetailDra
             <p className="text-xs text-muted-foreground font-mono mt-0.5">#{call.id.slice(0, 8)}</p>
           </div>
           <button
-            onClick={onClose}
+            onClick={requestClose}
             className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             <X className="h-4 w-4" />
