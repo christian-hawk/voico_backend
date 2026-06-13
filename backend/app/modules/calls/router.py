@@ -104,5 +104,6 @@ async def update_call_notes(
 async def webhook_call(
     payload: WebhookCallPayload,
     session: SessionDep,
+    service: Annotated[CallService, Depends(get_call_service)],
 ) -> CallResponse:
-    pass
+    return await service.process_webhook(payload)
