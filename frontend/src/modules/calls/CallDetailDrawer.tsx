@@ -89,7 +89,13 @@ export function CallDetailDrawer({ call: snapshot, onClose }: CallDetailDrawerPr
 
   const saveNotes = () => {
     const trimmed = draft.trim();
-    notesMutation.mutate({ id: call.id, notes: trimmed === "" ? null : trimmed });
+    const next = trimmed === "" ? null : trimmed;
+    // the backend already no-ops an unchanged value; skip the round trip too
+    if (next === call.notes) {
+      setIsEditing(false);
+      return;
+    }
+    notesMutation.mutate({ id: call.id, notes: next });
   };
 
   return (
