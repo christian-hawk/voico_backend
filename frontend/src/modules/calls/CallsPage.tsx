@@ -53,6 +53,15 @@ export function CallsPage() {
   const debouncedMinDuration = useDebouncedValue(filters.minDuration);
   const debouncedMaxDuration = useDebouncedValue(filters.maxDuration);
 
+  const minDuration = toIntParam(debouncedMinDuration);
+  const maxDuration = toIntParam(debouncedMaxDuration);
+  // an inverted range (min>max) would 422; filter by min only instead of
+  // issuing a request the backend rejects
+  const validMaxDuration =
+    minDuration !== undefined && maxDuration !== undefined && minDuration > maxDuration
+      ? undefined
+      : maxDuration;
+
   // empty and whitespace-only inputs become undefined: axios drops undefined
   // params, while an empty string would reach the API and 422 on min_length=1
   const queryParams: CallsQueryParams = {
@@ -62,8 +71,8 @@ export function CallsPage() {
     caller_name: debouncedCallerName.trim() || undefined,
     phone_number: debouncedPhoneNumber.trim() || undefined,
     label: filters.label || undefined,
-    min_duration: toIntParam(debouncedMinDuration),
-    max_duration: toIntParam(debouncedMaxDuration),
+    min_duration: minDuration,
+    max_duration: validMaxDuration,
     sort_by: sort?.by,
     sort_dir: sort?.dir,
   };
