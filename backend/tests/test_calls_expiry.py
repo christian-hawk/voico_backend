@@ -97,6 +97,19 @@ async def test_updated_at_bumped_on_expiry(test_session_factory, make_call):
     assert refreshed.started_at == old
 
 
+async def test_expiry_sets_ended_at(test_session_factory, make_call):
+    now = datetime.utcnow()
+    call = await make_call(
+        status=CallStatus.in_progress, started_at=now - THRESHOLD - timedelta(minutes=1)
+    )
+
+    await _expire(test_session_factory, now - THRESHOLD)
+
+    refreshed = await _get(test_session_factory, call.id)
+    assert refreshed.ended_at is not None
+    assert refreshed.duration_seconds is None
+
+
 async def test_once_commits_and_logs(test_session_factory, make_call, monkeypatch, caplog):
     now = datetime.utcnow()
     call = await make_call(

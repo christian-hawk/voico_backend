@@ -116,7 +116,7 @@ class CallRepository:
         stmt = (
             update(Call)
             .where(col(Call.status) == CallStatus.in_progress, col(Call.started_at) < cutoff)
-            .values(status=CallStatus.failed)
+            .values(status=CallStatus.failed, ended_at=datetime.utcnow())
         )
         result = await self.session.exec(stmt)
         return result.rowcount
