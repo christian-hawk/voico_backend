@@ -55,12 +55,10 @@ export function CallsPage() {
 
   const minDuration = toIntParam(debouncedMinDuration);
   const maxDuration = toIntParam(debouncedMaxDuration);
-  // an inverted range (min>max) would 422; filter by min only instead of
-  // issuing a request the backend rejects
-  const validMaxDuration =
-    minDuration !== undefined && maxDuration !== undefined && minDuration > maxDuration
-      ? undefined
-      : maxDuration;
+  // an inverted range (min>max) is a contradiction no call can satisfy and the
+  // backend 422s it; treat it as "no results" without issuing the request
+  const isRangeInvalid =
+    minDuration !== undefined && maxDuration !== undefined && minDuration > maxDuration;
 
   // empty and whitespace-only inputs become undefined: axios drops undefined
   // params, while an empty string would reach the API and 422 on min_length=1
@@ -72,7 +70,7 @@ export function CallsPage() {
     phone_number: debouncedPhoneNumber.trim() || undefined,
     label: filters.label || undefined,
     min_duration: minDuration,
-    max_duration: validMaxDuration,
+    max_duration: maxDuration,
     sort_by: sort?.by,
     sort_dir: sort?.dir,
   };
@@ -82,6 +80,7 @@ export function CallsPage() {
     queryFn: () => callsApi.list(queryParams),
     refetchInterval: 5000,
     placeholderData: keepPreviousData,
+    enabled: !isRangeInvalid,
   });
 
   function handleTabChange(tab: TabValue) {
@@ -141,7 +140,7 @@ export function CallsPage() {
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Stats row */}
-        {data && (
+        {!isRangeInvalid && data && (
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
             {[
               { label: "Total Calls", value: data.total },
@@ -199,7 +198,7 @@ export function CallsPage() {
               </div>
             ) : (
               <CallsTable
-                calls={data?.data ?? []}
+                calls={isRangeInvalid ? [] : (data?.data ?? [])}
                 onRowClick={setSelectedCall}
                 sort={sort}
                 onSortChange={handleSortChange}
@@ -208,7 +207,7 @@ export function CallsPage() {
           </CardContent>
 
           {/* Pagination */}
-          {data && data.total_pages > 1 && (
+          {!isRangeInvalid && data && data.total_pages > 1 && (
             <div
               className="flex items-center justify-between px-6 py-4 border-t border-border"
             >
