@@ -46,6 +46,8 @@ export function CallsPage() {
   const statusFilter = activeTab === "all" ? undefined : activeTab;
   const debouncedCallerName = useDebouncedValue(filters.callerName);
   const debouncedPhoneNumber = useDebouncedValue(filters.phoneNumber);
+  const debouncedMinDuration = useDebouncedValue(filters.minDuration);
+  const debouncedMaxDuration = useDebouncedValue(filters.maxDuration);
 
   // empty and whitespace-only inputs become undefined: axios drops undefined
   // params, while an empty string would reach the API and 422 on min_length=1
@@ -56,8 +58,8 @@ export function CallsPage() {
     caller_name: debouncedCallerName.trim() || undefined,
     phone_number: debouncedPhoneNumber.trim() || undefined,
     label: filters.label || undefined,
-    min_duration: toIntParam(filters.minDuration),
-    max_duration: toIntParam(filters.maxDuration),
+    min_duration: toIntParam(debouncedMinDuration),
+    max_duration: toIntParam(debouncedMaxDuration),
     sort_by: sort?.by,
     sort_dir: sort?.dir,
   };
