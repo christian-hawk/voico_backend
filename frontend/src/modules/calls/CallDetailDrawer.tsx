@@ -41,8 +41,9 @@ function formatDuration(seconds: number | null): string {
 }
 
 export function CallDetailDrawer({ call: snapshot, onClose }: CallDetailDrawerProps) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [draft, setDraft] = useState("");
+  // null = not editing; a string = the in-progress draft. one source of truth,
+  // so there's no orphan "draft set but not editing" state to keep in sync.
+  const [draft, setDraft] = useState<string | null>(null);
   const queryClient = useQueryClient();
 
   // keep the open call live: the list polls and the webhook can complete a call
@@ -61,12 +62,13 @@ export function CallDetailDrawer({ call: snapshot, onClose }: CallDetailDrawerPr
     onSuccess: (updated) => {
       queryClient.setQueryData(["call", updated.id], updated);
       queryClient.invalidateQueries({ queryKey: ["calls"] });
-      setIsEditing(false);
+      setDraft(null);
     },
   });
 
   if (!call) return null;
 
+  const isEditing = draft !== null;
   const isDirty = isEditing && draft !== (call.notes ?? "");
 
   // the overlay and the X close the whole drawer; confirm first so an accidental
@@ -79,20 +81,16 @@ export function CallDetailDrawer({ call: snapshot, onClose }: CallDetailDrawerPr
   const startEditing = () => {
     notesMutation.reset();
     setDraft(call.notes ?? "");
-    setIsEditing(true);
   };
 
-  const cancelEditing = () => {
-    notesMutation.reset();
-    setIsEditing(false);
-  };
+  const cancelEditing = () => setDraft(null);
 
   const saveNotes = () => {
-    const trimmed = draft.trim();
+    const trimmed = (draft ?? "").trim();
     const next = trimmed === "" ? null : trimmed;
     // the backend already no-ops an unchanged value; skip the round trip too
     if (next === call.notes) {
-      setIsEditing(false);
+      setDraft(null);
       return;
     }
     notesMutation.mutate({ id: call.id, notes: next });
@@ -207,7 +205,7 @@ export function CallDetailDrawer({ call: snapshot, onClose }: CallDetailDrawerPr
               <div className="space-y-2">
                 <Textarea
                   autoFocus
-                  value={draft}
+                  value={draft ?? ""}
                   placeholder="Add notes…"
                   disabled={notesMutation.isPending}
                   onChange={(e) => setDraft(e.target.value)}
