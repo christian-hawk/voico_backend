@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { X, Phone, User, Clock, Calendar, FileText, Sparkles, StickyNote } from "lucide-react";
 import { callsApi } from "@/services/api";
@@ -11,7 +11,6 @@ import type { Call } from "@/types/calls";
 interface CallDetailDrawerProps {
   call: Call | null;
   onClose: () => void;
-  onCallUpdated: (call: Call) => void;
 }
 
 function DetailRow({
@@ -41,16 +40,26 @@ function formatDuration(seconds: number | null): string {
   return m > 0 ? `${m} min ${s} sec` : `${s} sec`;
 }
 
-export function CallDetailDrawer({ call, onClose, onCallUpdated }: CallDetailDrawerProps) {
+export function CallDetailDrawer({ call: snapshot, onClose }: CallDetailDrawerProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [draft, setDraft] = useState("");
   const queryClient = useQueryClient();
+
+  // keep the open call live: the list polls and the webhook can complete a call
+  // while the drawer is open. the clicked row seeds initialData (no loading flash).
+  const { data: call } = useQuery({
+    queryKey: ["call", snapshot?.id],
+    queryFn: () => callsApi.getById(snapshot!.id),
+    enabled: snapshot !== null,
+    initialData: snapshot ?? undefined,
+    refetchInterval: 5000,
+  });
 
   const notesMutation = useMutation({
     mutationFn: (vars: { id: string; notes: string | null }) =>
       callsApi.updateNotes(vars.id, vars.notes),
     onSuccess: (updated) => {
-      onCallUpdated(updated);
+      queryClient.setQueryData(["call", updated.id], updated);
       queryClient.invalidateQueries({ queryKey: ["calls"] });
       setIsEditing(false);
     },

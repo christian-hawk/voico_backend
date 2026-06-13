@@ -242,7 +242,6 @@ export function CallsPage() {
         key={selectedCall?.id}
         call={selectedCall}
         onClose={() => setSelectedCall(null)}
-        onCallUpdated={setSelectedCall}
       />
     </div>
   );
