@@ -8,9 +8,12 @@ from app.core.db import async_session
 from app.core.decorators import session_manager
 from app.modules.calls.repository import CallRepository
 from app.modules.calls.schema import (
+    CallLabel,
     CallResponse,
     CallStatus,
     PaginatedCallsResponse,
+    SortDir,
+    SortField,
     UpdateNotesRequest,
     WebhookCallPayload,
 )
@@ -38,8 +41,42 @@ async def list_calls(
     status: Optional[CallStatus] = Query(default=None),
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
+    caller_name: Optional[str] = Query(
+        default=None,
+        min_length=1,
+        description="Partial match on caller name (ASCII case-insensitive)",
+    ),
+    phone_number: Optional[str] = Query(
+        default=None,
+        min_length=1,
+        description="Partial match on phone number; digits match digits regardless of formatting",
+    ),
+    label: Optional[CallLabel] = Query(default=None, description="Exact label match"),
+    min_duration: Optional[int] = Query(
+        default=None, ge=0, description="Minimum duration in seconds, inclusive"
+    ),
+    max_duration: Optional[int] = Query(
+        default=None, ge=0, description="Maximum duration in seconds, inclusive"
+    ),
+    sort_by: Optional[SortField] = Query(
+        default=None, description="Column to sort by; omitted keeps newest-first ordering"
+    ),
+    sort_dir: SortDir = Query(
+        default=SortDir.asc, description="Sort direction; only applies with sort_by"
+    ),
 ) -> PaginatedCallsResponse:
-    return await service.list_calls(status=status, page=page, page_size=page_size)
+    return await service.list_calls(
+        status=status,
+        page=page,
+        page_size=page_size,
+        caller_name=caller_name,
+        phone_number=phone_number,
+        label=label,
+        min_duration=min_duration,
+        max_duration=max_duration,
+        sort_by=sort_by,
+        sort_dir=sort_dir,
+    )
 
 
 @router.get("/calls/{call_id}", response_model=CallResponse)

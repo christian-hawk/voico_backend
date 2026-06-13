@@ -1,5 +1,28 @@
 export type CallStatus = "in_progress" | "success" | "failed";
 
+// single source for the label list: the union is derived from the array so
+// the <Select> options and the type can never drift apart
+export const CALL_LABELS = [
+  "Sales inquiry",
+  "Support",
+  "Complaint",
+  "Appointment",
+  "Follow-up",
+  "Other",
+] as const;
+
+export type CallLabel = (typeof CALL_LABELS)[number];
+
+export type SortField =
+  | "phone_number"
+  | "caller_name"
+  | "status"
+  | "label"
+  | "duration_seconds"
+  | "started_at";
+
+export type SortDir = "asc" | "desc";
+
 export interface Call {
   id: string;
   phone_number: string;
@@ -35,4 +58,11 @@ export interface CallsQueryParams {
   status?: CallStatus;
   page?: number;
   page_size?: number;
+  caller_name?: string;
+  phone_number?: string;
+  label?: CallLabel;
+  min_duration?: number;
+  max_duration?: number;
+  sort_by?: SortField;
+  sort_dir?: SortDir;
 }
