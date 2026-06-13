@@ -89,7 +89,7 @@ class CallService:
             call = await self.repository.update(call)
         return CallResponse.model_validate(call, from_attributes=True)
 
-    async def process_webhook(self, payload: WebhookCallPayload) -> CallResponse:
+    async def record_call_outcome(self, payload: WebhookCallPayload) -> CallResponse:
         call = await self._get_call_or_404(payload.call_id)
         self._apply_outcome(call, payload)
         transcript = self._transcript_to_enrich(call)

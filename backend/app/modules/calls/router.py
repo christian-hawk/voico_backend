@@ -114,4 +114,4 @@ async def webhook_call(
     session: SessionDep,
     service: Annotated[CallService, Depends(get_call_service)],
 ) -> CallResponse:
-    return await service.process_webhook(payload)
+    return await service.record_call_outcome(payload)
