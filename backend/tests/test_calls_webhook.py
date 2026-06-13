@@ -109,7 +109,7 @@ async def test_webhook_skips_enrichment_when_in_progress(client, make_call):
     assert resp.json()["summary"] is None
 
 
-async def test_webhook_skips_enrichment_on_redelivery(client, make_call):
+async def test_webhook_reenriches_on_redelivery(client, make_call):
     call = await make_call()
     enrich_calls = 0
 
@@ -128,8 +128,28 @@ async def test_webhook_skips_enrichment_on_redelivery(client, make_call):
     app.dependency_overrides[get_enricher] = lambda: _spy("second summary")
     redelivered = await client.post(URL, json=_payload(call.id))
 
+    assert enrich_calls == 2
+    assert redelivered.json()["summary"] == "second summary"
+
+
+async def test_webhook_enriches_late_transcript(client, make_call):
+    call = await make_call()
+    enrich_calls = 0
+
+    async def _enrich(transcript: str) -> CallEnrichment:
+        nonlocal enrich_calls
+        enrich_calls += 1
+        return CallEnrichment(summary="late summary", label=CallLabel.support)
+
+    app.dependency_overrides[get_enricher] = lambda: _enrich
+
+    no_transcript = await client.post(URL, json=_payload(call.id, raw_transcript=None))
+    assert enrich_calls == 0
+    assert no_transcript.json()["summary"] is None
+
+    with_transcript = await client.post(URL, json=_payload(call.id))
     assert enrich_calls == 1
-    assert redelivered.json()["summary"] == "first summary"
+    assert with_transcript.json()["summary"] == "late summary"
 
 
 async def test_webhook_persists_on_openai_failure(client, make_call):
