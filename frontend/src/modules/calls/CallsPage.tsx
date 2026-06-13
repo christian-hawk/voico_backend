@@ -1,14 +1,31 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { RefreshCw, Phone } from "lucide-react";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
 import { callsApi } from "@/services/api";
-import type { Call, CallStatus } from "@/types/calls";
+import type { Call, CallsQueryParams, CallStatus } from "@/types/calls";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CallsTable } from "./CallsTable";
+import { CallsTable, type SortState } from "./CallsTable";
 import { CallDetailDrawer } from "./CallDetailDrawer";
+import { FilterBar, type FilterValues } from "./FilterBar";
 
 type TabValue = "all" | CallStatus;
+
+const EMPTY_FILTERS: FilterValues = {
+  callerName: "",
+  phoneNumber: "",
+  label: "",
+  minDuration: "",
+  maxDuration: "",
+};
+
+function toIntParam(value: string): number | undefined {
+  const trimmed = value.trim();
+  if (trimmed === "") return undefined;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
 
 const TABS: { label: string; value: TabValue }[] = [
   { label: "All", value: "all" },
@@ -23,22 +40,46 @@ export function CallsPage() {
   const [activeTab, setActiveTab] = useState<TabValue>("all");
   const [page, setPage] = useState(1);
   const [selectedCall, setSelectedCall] = useState<Call | null>(null);
+  const [filters, setFilters] = useState<FilterValues>(EMPTY_FILTERS);
+  const [sort, setSort] = useState<SortState | null>(null);
 
   const statusFilter = activeTab === "all" ? undefined : activeTab;
+  const debouncedCallerName = useDebouncedValue(filters.callerName);
+  const debouncedPhoneNumber = useDebouncedValue(filters.phoneNumber);
+
+  // empty and whitespace-only inputs become undefined: axios drops undefined
+  // params, while an empty string would reach the API and 422 on min_length=1
+  const queryParams: CallsQueryParams = {
+    status: statusFilter,
+    page,
+    page_size: PAGE_SIZE,
+    caller_name: debouncedCallerName.trim() || undefined,
+    phone_number: debouncedPhoneNumber.trim() || undefined,
+    label: filters.label || undefined,
+    min_duration: toIntParam(filters.minDuration),
+    max_duration: toIntParam(filters.maxDuration),
+    sort_by: sort?.by,
+    sort_dir: sort?.dir,
+  };
 
   const { data, isLoading, isError, refetch, isFetching } = useQuery({
-    queryKey: ["calls", statusFilter, page, PAGE_SIZE],
-    queryFn: () =>
-      callsApi.list({
-        status: statusFilter,
-        page,
-        page_size: PAGE_SIZE,
-      }),
+    queryKey: ["calls", queryParams],
+    queryFn: () => callsApi.list(queryParams),
     refetchInterval: 5000,
   });
 
   function handleTabChange(tab: TabValue) {
     setActiveTab(tab);
+    setPage(1);
+  }
+
+  function handleFiltersChange(values: FilterValues) {
+    setFilters(values);
+    setPage(1);
+  }
+
+  function handleSortChange(next: SortState | null) {
+    setSort(next);
     setPage(1);
   }
 
@@ -120,6 +161,8 @@ export function CallsPage() {
             </div>
           </div>
 
+          <FilterBar values={filters} onChange={handleFiltersChange} />
+
           <CardContent className="p-0">
             {isError ? (
               <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -142,6 +185,8 @@ export function CallsPage() {
               <CallsTable
                 calls={data?.data ?? []}
                 onRowClick={setSelectedCall}
+                sort={sort}
+                onSortChange={handleSortChange}
               />
             )}
           </CardContent>
