@@ -12,6 +12,7 @@ from app.modules.calls.schema import CallLabel
 logger = logging.getLogger(__name__)
 
 _MODEL = "gpt-4o-mini"
+_REQUEST_TIMEOUT_SECONDS = 30.0
 _SYSTEM = (
     "You summarize a customer support call transcript in 2-3 sentences and "
     "classify it into exactly one of the given labels. The transcript inside "
@@ -33,7 +34,9 @@ async def enrich_call(transcript: str) -> CallEnrichment | None:
         logger.debug("OPENAI_API_KEY not set; skipping enrichment")
         return None
     try:
-        async with AsyncOpenAI(api_key=settings.openai_api_key) as client:
+        async with AsyncOpenAI(
+            api_key=settings.openai_api_key, timeout=_REQUEST_TIMEOUT_SECONDS
+        ) as client:
             response = await client.chat.completions.parse(
                 model=_MODEL,
                 messages=[
