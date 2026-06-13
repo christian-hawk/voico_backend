@@ -1,3 +1,4 @@
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -7,6 +8,8 @@ class Settings(BaseSettings):
     database_url: str = "sqlite+aiosqlite:///./db.sqlite3"
     openai_api_key: str = ""
     app_name: str = "Voico Calls Dashboard"
+    stale_expiry_interval_seconds: int = Field(default=600, ge=1)
+    stale_expiry_threshold_seconds: int = Field(default=1800, ge=1)
 
 
 settings = Settings()
