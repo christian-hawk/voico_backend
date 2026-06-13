@@ -1,16 +1,7 @@
 import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Select } from "@/components/ui/select";
-import type { CallLabel } from "@/types/calls";
-
-const LABELS: CallLabel[] = [
-  "Sales inquiry",
-  "Support",
-  "Complaint",
-  "Appointment",
-  "Follow-up",
-  "Other",
-];
+import { CALL_LABELS, type CallLabel } from "@/types/calls";
 
 export interface FilterValues {
   callerName: string;
@@ -56,7 +47,7 @@ export function FilterBar({ values, onChange }: FilterBarProps) {
           className="w-40"
         >
           <option value="">All labels</option>
-          {LABELS.map((label) => (
+          {CALL_LABELS.map((label) => (
             <option key={label} value={label}>
               {label}
             </option>

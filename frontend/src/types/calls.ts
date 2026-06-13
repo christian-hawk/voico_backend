@@ -1,12 +1,17 @@
 export type CallStatus = "in_progress" | "success" | "failed";
 
-export type CallLabel =
-  | "Sales inquiry"
-  | "Support"
-  | "Complaint"
-  | "Appointment"
-  | "Follow-up"
-  | "Other";
+// single source for the label list: the union is derived from the array so
+// the <Select> options and the type can never drift apart
+export const CALL_LABELS = [
+  "Sales inquiry",
+  "Support",
+  "Complaint",
+  "Appointment",
+  "Follow-up",
+  "Other",
+] as const;
+
+export type CallLabel = (typeof CALL_LABELS)[number];
 
 export type SortField =
   | "phone_number"
