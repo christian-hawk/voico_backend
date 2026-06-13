@@ -1,7 +1,42 @@
 import { format } from "date-fns";
-import { Loader2, CheckCircle2, XCircle, Phone, ChevronRight } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowUp,
+  ArrowUpDown,
+  CheckCircle2,
+  ChevronRight,
+  Loader2,
+  Phone,
+  XCircle,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import type { Call, CallStatus } from "@/types/calls";
+import type { Call, CallStatus, SortDir, SortField } from "@/types/calls";
+
+export interface SortState {
+  by: SortField;
+  dir: SortDir;
+}
+
+const COLUMNS: { label: string; field: SortField }[] = [
+  { label: "Phone", field: "phone_number" },
+  { label: "Caller", field: "caller_name" },
+  { label: "Status", field: "status" },
+  { label: "Label", field: "label" },
+  { label: "Duration", field: "duration_seconds" },
+  { label: "Started At", field: "started_at" },
+];
+
+// click cycles asc -> desc -> no sort (back to the default newest-first order)
+function nextSort(current: SortState | null, field: SortField): SortState | null {
+  if (current?.by !== field) return { by: field, dir: "asc" };
+  if (current.dir === "asc") return { by: field, dir: "desc" };
+  return null;
+}
+
+function SortIcon({ sort, field }: { sort: SortState | null; field: SortField }) {
+  if (sort?.by !== field) return <ArrowUpDown className="h-3 w-3 opacity-40" />;
+  return sort.dir === "asc" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />;
+}
 
 interface StatusBadgeProps {
   status: CallStatus;
@@ -42,9 +77,11 @@ function formatDuration(seconds: number | null): string {
 interface CallsTableProps {
   calls: Call[];
   onRowClick: (call: Call) => void;
+  sort?: SortState | null;
+  onSortChange?: (sort: SortState | null) => void;
 }
 
-export function CallsTable({ calls, onRowClick }: CallsTableProps) {
+export function CallsTable({ calls, onRowClick, sort = null, onSortChange }: CallsTableProps) {
   if (calls.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -65,12 +102,25 @@ export function CallsTable({ calls, onRowClick }: CallsTableProps) {
       <table className="w-full text-sm">
         <thead>
           <tr className="border-b border-border">
-            <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground">Phone</th>
-            <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground">Caller</th>
-            <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground">Status</th>
-            <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground">Label</th>
-            <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground">Duration</th>
-            <th className="text-left py-3 px-4 text-xs font-medium text-muted-foreground">Started At</th>
+            {COLUMNS.map((column) => (
+              <th
+                key={column.field}
+                className="text-left py-3 px-4 text-xs font-medium text-muted-foreground"
+              >
+                {onSortChange ? (
+                  <button
+                    type="button"
+                    onClick={() => onSortChange(nextSort(sort, column.field))}
+                    className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                  >
+                    {column.label}
+                    <SortIcon sort={sort} field={column.field} />
+                  </button>
+                ) : (
+                  column.label
+                )}
+              </th>
+            ))}
             <th className="py-3 px-4" />
           </tr>
         </thead>
