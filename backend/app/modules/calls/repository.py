@@ -78,14 +78,12 @@ class CallRepository:
         count_result = await self.session.exec(count_query)
         total = count_result.one()
 
-        counts: dict[str, int] = {}
-        for s in CallStatus:
-            c = (
-                await self.session.exec(
-                    select(func.count()).select_from(Call).where(Call.status == s)
-                )
-            ).one()
-            counts[s.value] = c
+        # counts are global by design (only total reflects the filters); one
+        # GROUP BY replaces the per-status loop. Missing statuses default to 0.
+        count_rows = await self.session.exec(
+            select(col(Call.status), func.count()).group_by(col(Call.status))
+        )
+        counts: dict[str, int] = {status.value: c for status, c in count_rows}
 
         # created_at desc + id keep pagination stable across ties in any ordering
         tie_breakers = (col(Call.created_at).desc(), col(Call.id))
