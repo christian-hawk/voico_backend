@@ -4,7 +4,7 @@ from typing import Optional
 
 from fastapi import HTTPException, status
 
-from app.modules.calls.ai import enrich_call
+from app.modules.calls.ai import Enricher
 from app.modules.calls.repository import CallRepository
 from app.modules.calls.schema import (
     Call,
@@ -25,8 +25,9 @@ _HTTP_422 = status.HTTP_422_UNPROCESSABLE_CONTENT
 
 
 class CallService:
-    def __init__(self, repository: CallRepository) -> None:
+    def __init__(self, repository: CallRepository, enricher: Enricher) -> None:
         self.repository = repository
+        self.enricher = enricher
 
     async def list_calls(
         self,
@@ -98,7 +99,7 @@ class CallService:
         if payload.ended_at is not None:
             call.ended_at = payload.ended_at
         if payload.status in (CallStatus.success, CallStatus.failed) and payload.raw_transcript:
-            enrichment = await enrich_call(payload.raw_transcript)
+            enrichment = await self.enricher(payload.raw_transcript)
             if enrichment is not None:
                 call.summary = enrichment.summary
                 call.label = enrichment.label

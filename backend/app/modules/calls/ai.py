@@ -1,6 +1,7 @@
 """OpenAI enrichment for the calls module."""
 
 import logging
+from collections.abc import Awaitable, Callable
 
 from openai import AsyncOpenAI
 from pydantic import BaseModel
@@ -22,20 +23,23 @@ class CallEnrichment(BaseModel):
     label: CallLabel
 
 
+Enricher = Callable[[str], Awaitable[CallEnrichment | None]]
+
+
 async def enrich_call(transcript: str) -> CallEnrichment | None:
     if not settings.openai_api_key:
         logger.warning("OPENAI_API_KEY not set; skipping enrichment")
         return None
     try:
-        client = AsyncOpenAI(api_key=settings.openai_api_key)
-        response = await client.chat.completions.parse(
-            model=_MODEL,
-            messages=[
-                {"role": "system", "content": _SYSTEM},
-                {"role": "user", "content": transcript},
-            ],
-            response_format=CallEnrichment,
-        )
+        async with AsyncOpenAI(api_key=settings.openai_api_key) as client:
+            response = await client.chat.completions.parse(
+                model=_MODEL,
+                messages=[
+                    {"role": "system", "content": _SYSTEM},
+                    {"role": "user", "content": transcript},
+                ],
+                response_format=CallEnrichment,
+            )
         parsed = response.choices[0].message.parsed
         if parsed is None:
             logger.warning("OpenAI returned no parsed enrichment")

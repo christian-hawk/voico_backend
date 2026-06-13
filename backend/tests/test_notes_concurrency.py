@@ -1,3 +1,4 @@
+from app.modules.calls.ai import enrich_call
 from app.modules.calls.repository import CallRepository
 from app.modules.calls.schema import CallStatus
 from app.modules.calls.service import CallService
@@ -8,7 +9,7 @@ async def test_update_notes_preserves_concurrent_writes(test_session_factory, ma
 
     async with test_session_factory() as session_a:
         repo_a = CallRepository(session_a)
-        service_a = CallService(repo_a)
+        service_a = CallService(repo_a, enrich_call)
 
         # pin the pre-concurrency snapshot in session A's identity map
         stale = await repo_a.get_by_id(call.id)

@@ -1,7 +1,9 @@
 import uuid
 
 from app.core.config import settings
+from app.main import app
 from app.modules.calls.ai import CallEnrichment, enrich_call
+from app.modules.calls.router import get_enricher
 from app.modules.calls.schema import CallLabel
 
 URL = "/api/webhook/call"
@@ -30,9 +32,9 @@ def _raising_client(*args, **kwargs):
     raise RuntimeError("api down")
 
 
-async def test_webhook_updates_call_fields(client, make_call, monkeypatch):
+async def test_webhook_updates_call_fields(client, make_call):
     call = await make_call()
-    monkeypatch.setattr("app.modules.calls.service.enrich_call", _fake_enrichment())
+    app.dependency_overrides[get_enricher] = lambda: _fake_enrichment()
 
     resp = await client.post(URL, json=_payload(call.id))
 
@@ -44,11 +46,10 @@ async def test_webhook_updates_call_fields(client, make_call, monkeypatch):
     assert body["ended_at"].startswith("2024-01-01T12:00:00")
 
 
-async def test_webhook_enriches_on_success_with_transcript(client, make_call, monkeypatch):
+async def test_webhook_enriches_on_success_with_transcript(client, make_call):
     call = await make_call()
-    monkeypatch.setattr(
-        "app.modules.calls.service.enrich_call",
-        _fake_enrichment("Caller upgraded.", CallLabel.sales_inquiry),
+    app.dependency_overrides[get_enricher] = lambda: _fake_enrichment(
+        "Caller upgraded.", CallLabel.sales_inquiry
     )
 
     resp = await client.post(URL, json=_payload(call.id, status="success"))
@@ -58,11 +59,10 @@ async def test_webhook_enriches_on_success_with_transcript(client, make_call, mo
     assert body["label"] == "Sales inquiry"
 
 
-async def test_webhook_enriches_on_failed_with_transcript(client, make_call, monkeypatch):
+async def test_webhook_enriches_on_failed_with_transcript(client, make_call):
     call = await make_call()
-    monkeypatch.setattr(
-        "app.modules.calls.service.enrich_call",
-        _fake_enrichment("Issue unresolved.", CallLabel.complaint),
+    app.dependency_overrides[get_enricher] = lambda: _fake_enrichment(
+        "Issue unresolved.", CallLabel.complaint
     )
 
     resp = await client.post(URL, json=_payload(call.id, status="failed"))
@@ -73,7 +73,7 @@ async def test_webhook_enriches_on_failed_with_transcript(client, make_call, mon
     assert body["label"] == "Complaint"
 
 
-async def test_webhook_skips_enrichment_without_transcript(client, make_call, monkeypatch):
+async def test_webhook_skips_enrichment_without_transcript(client, make_call):
     call = await make_call()
     called = False
 
@@ -82,7 +82,7 @@ async def test_webhook_skips_enrichment_without_transcript(client, make_call, mo
         called = True
         return CallEnrichment(summary="x", label=CallLabel.other)
 
-    monkeypatch.setattr("app.modules.calls.service.enrich_call", _enrich)
+    app.dependency_overrides[get_enricher] = lambda: _enrich
 
     resp = await client.post(URL, json=_payload(call.id, status="success", raw_transcript=None))
 
@@ -92,7 +92,7 @@ async def test_webhook_skips_enrichment_without_transcript(client, make_call, mo
     assert body["label"] is None
 
 
-async def test_webhook_skips_enrichment_when_in_progress(client, make_call, monkeypatch):
+async def test_webhook_skips_enrichment_when_in_progress(client, make_call):
     call = await make_call()
     called = False
 
@@ -101,7 +101,7 @@ async def test_webhook_skips_enrichment_when_in_progress(client, make_call, monk
         called = True
         return CallEnrichment(summary="x", label=CallLabel.other)
 
-    monkeypatch.setattr("app.modules.calls.service.enrich_call", _enrich)
+    app.dependency_overrides[get_enricher] = lambda: _enrich
 
     resp = await client.post(URL, json=_payload(call.id, status="in_progress"))
 
@@ -109,13 +109,13 @@ async def test_webhook_skips_enrichment_when_in_progress(client, make_call, monk
     assert resp.json()["summary"] is None
 
 
-async def test_webhook_persists_on_openai_failure(client, make_call, monkeypatch):
+async def test_webhook_persists_on_openai_failure(client, make_call):
     call = await make_call()
 
     async def _enrich(transcript: str):
         return None
 
-    monkeypatch.setattr("app.modules.calls.service.enrich_call", _enrich)
+    app.dependency_overrides[get_enricher] = lambda: _enrich
 
     resp = await client.post(URL, json=_payload(call.id, status="success"))
 
@@ -141,8 +141,8 @@ async def test_webhook_persists_when_client_raises(client, make_call, monkeypatc
     assert body["label"] is None
 
 
-async def test_webhook_unknown_call_returns_404(client, monkeypatch):
-    monkeypatch.setattr("app.modules.calls.service.enrich_call", _fake_enrichment())
+async def test_webhook_unknown_call_returns_404(client):
+    app.dependency_overrides[get_enricher] = lambda: _fake_enrichment()
 
     resp = await client.post(URL, json=_payload(uuid.uuid4()))
 

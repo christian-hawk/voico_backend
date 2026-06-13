@@ -6,6 +6,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 from app.core.db import async_session
 from app.core.decorators import session_manager
+from app.modules.calls.ai import Enricher, enrich_call
 from app.modules.calls.repository import CallRepository
 from app.modules.calls.schema import (
     CallLabel,
@@ -30,8 +31,15 @@ async def get_session():
 SessionDep = Annotated[AsyncSession, Depends(get_session)]
 
 
-def get_call_service(session: SessionDep) -> CallService:
-    return CallService(CallRepository(session))
+def get_enricher() -> Enricher:
+    return enrich_call
+
+
+EnricherDep = Annotated[Enricher, Depends(get_enricher)]
+
+
+def get_call_service(session: SessionDep, enricher: EnricherDep) -> CallService:
+    return CallService(CallRepository(session), enricher)
 
 
 @router.get("/calls", response_model=PaginatedCallsResponse)
