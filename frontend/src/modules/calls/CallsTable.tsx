@@ -77,11 +77,11 @@ function formatDuration(seconds: number | null): string {
 interface CallsTableProps {
   calls: Call[];
   onRowClick: (call: Call) => void;
-  sort?: SortState | null;
-  onSortChange?: (sort: SortState | null) => void;
+  sort: SortState | null;
+  onSortChange: (sort: SortState | null) => void;
 }
 
-export function CallsTable({ calls, onRowClick, sort = null, onSortChange }: CallsTableProps) {
+export function CallsTable({ calls, onRowClick, sort, onSortChange }: CallsTableProps) {
   if (calls.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -107,18 +107,14 @@ export function CallsTable({ calls, onRowClick, sort = null, onSortChange }: Cal
                 key={column.field}
                 className="text-left py-3 px-4 text-xs font-medium text-muted-foreground"
               >
-                {onSortChange ? (
-                  <button
-                    type="button"
-                    onClick={() => onSortChange(nextSort(sort, column.field))}
-                    className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
-                  >
-                    {column.label}
-                    <SortIcon sort={sort} field={column.field} />
-                  </button>
-                ) : (
-                  column.label
-                )}
+                <button
+                  type="button"
+                  onClick={() => onSortChange(nextSort(sort, column.field))}
+                  className="inline-flex items-center gap-1 hover:text-foreground transition-colors"
+                >
+                  {column.label}
+                  <SortIcon sort={sort} field={column.field} />
+                </button>
               </th>
             ))}
             <th className="py-3 px-4" />
