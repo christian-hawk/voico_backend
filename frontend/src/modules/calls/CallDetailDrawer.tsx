@@ -79,6 +79,7 @@ export function CallDetailDrawer({ call: snapshot, onClose }: CallDetailDrawerPr
   // the overlay and the X close the whole drawer; confirm first so an accidental
   // click doesn't silently drop an in-progress edit
   const requestClose = () => {
+    if (notesMutation.isPending) return;
     if (isDirty && !window.confirm("Discard your unsaved note?")) return;
     onClose();
   };
@@ -117,7 +118,8 @@ export function CallDetailDrawer({ call: snapshot, onClose }: CallDetailDrawerPr
           </div>
           <button
             onClick={requestClose}
-            className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+            disabled={notesMutation.isPending}
+            className="rounded-md p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors disabled:opacity-50 disabled:pointer-events-none"
           >
             <X className="h-4 w-4" />
           </button>
