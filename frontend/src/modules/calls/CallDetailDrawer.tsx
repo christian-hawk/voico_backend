@@ -65,7 +65,8 @@ export function CallDetailDrawer({ call: snapshot, onClose }: CallDetailDrawerPr
   const notesMutation = useMutation({
     mutationFn: (vars: { id: string; notes: string | null }) =>
       callsApi.updateNotes(vars.id, vars.notes),
-    onSuccess: (updated) => {
+    onSuccess: async (updated) => {
+      await queryClient.cancelQueries({ queryKey: ["call", updated.id] });
       queryClient.setQueryData(["call", updated.id], updated);
       queryClient.invalidateQueries({ queryKey: ["calls"] });
       setDraft(null);
