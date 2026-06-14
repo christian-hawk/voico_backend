@@ -40,6 +40,11 @@ function formatDuration(seconds: number | null): string {
   return m > 0 ? `${m} min ${s} sec` : `${s} sec`;
 }
 
+function normalizeNote(value: string): string | null {
+  const trimmed = value.trim();
+  return trimmed === "" ? null : trimmed;
+}
+
 export function CallDetailDrawer({ call: snapshot, onClose }: CallDetailDrawerProps) {
   // null = not editing; a string = the in-progress draft. one source of truth,
   // so there's no orphan "draft set but not editing" state to keep in sync.
@@ -69,7 +74,7 @@ export function CallDetailDrawer({ call: snapshot, onClose }: CallDetailDrawerPr
   if (!call) return null;
 
   const isEditing = draft !== null;
-  const isDirty = isEditing && draft !== (call.notes ?? "");
+  const isDirty = draft !== null && normalizeNote(draft) !== call.notes;
 
   // the overlay and the X close the whole drawer; confirm first so an accidental
   // click doesn't silently drop an in-progress edit
@@ -86,8 +91,7 @@ export function CallDetailDrawer({ call: snapshot, onClose }: CallDetailDrawerPr
   const cancelEditing = () => setDraft(null);
 
   const saveNotes = () => {
-    const trimmed = (draft ?? "").trim();
-    const next = trimmed === "" ? null : trimmed;
+    const next = normalizeNote(draft ?? "");
     // the backend already no-ops an unchanged value; skip the round trip too
     if (next === call.notes) {
       setDraft(null);
