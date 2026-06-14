@@ -238,11 +238,13 @@ export function CallsPage() {
         </Card>
       </main>
 
-      <CallDetailDrawer
-        key={selectedCall?.id}
-        call={selectedCall}
-        onClose={() => setSelectedCall(null)}
-      />
+      {selectedCall && (
+        <CallDetailDrawer
+          key={selectedCall.id}
+          call={selectedCall}
+          onClose={() => setSelectedCall(null)}
+        />
+      )}
     </div>
   );
 }

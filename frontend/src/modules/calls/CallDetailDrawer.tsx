@@ -9,7 +9,7 @@ import { StatusBadge } from "./CallsTable";
 import type { Call } from "@/types/calls";
 
 interface CallDetailDrawerProps {
-  call: Call | null;
+  call: Call;
   onClose: () => void;
 }
 
@@ -54,10 +54,9 @@ export function CallDetailDrawer({ call: snapshot, onClose }: CallDetailDrawerPr
   // keep the open call live: the list polls and the webhook can complete a call
   // while the drawer is open. the clicked row seeds initialData (no loading flash).
   const { data: call } = useQuery({
-    queryKey: ["call", snapshot?.id],
-    queryFn: () => callsApi.getById(snapshot!.id),
-    enabled: snapshot !== null,
-    initialData: snapshot ?? undefined,
+    queryKey: ["call", snapshot.id],
+    queryFn: () => callsApi.getById(snapshot.id),
+    initialData: snapshot,
     staleTime: 0,
     refetchInterval: draft === null ? 5000 : false,
   });
@@ -72,8 +71,6 @@ export function CallDetailDrawer({ call: snapshot, onClose }: CallDetailDrawerPr
       setDraft(null);
     },
   });
-
-  if (!call) return null;
 
   const isEditing = draft !== null;
   const isDirty = draft !== null && normalizeNote(draft) !== call.notes;
