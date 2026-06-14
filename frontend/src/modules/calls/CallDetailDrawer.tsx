@@ -59,7 +59,7 @@ export function CallDetailDrawer({ call: snapshot, onClose }: CallDetailDrawerPr
     enabled: snapshot !== null,
     initialData: snapshot ?? undefined,
     staleTime: 0,
-    refetchInterval: 5000,
+    refetchInterval: draft === null ? 5000 : false,
   });
 
   const notesMutation = useMutation({
