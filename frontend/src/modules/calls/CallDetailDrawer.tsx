@@ -58,6 +58,7 @@ export function CallDetailDrawer({ call: snapshot, onClose }: CallDetailDrawerPr
     queryFn: () => callsApi.getById(snapshot!.id),
     enabled: snapshot !== null,
     initialData: snapshot ?? undefined,
+    staleTime: 0,
     refetchInterval: 5000,
   });
 
